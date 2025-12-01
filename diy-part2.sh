@@ -11,19 +11,26 @@ WRT_SSID="My_AP8220"       # WiFi 名称
 WRT_WORD="12345678"        # WiFi 密码
 WRT_TARGET="QUALCOMMAX"    # 目标平台 (高通专用)
 
-# --- 必要的补充插件 (源里没有的才在这里下) ---
+# --- 手动下载插件 (源里没有的，或者求稳的，全在这里下) ---
 
-# [插件] EasyTier (源里通常没有最新版)
+# [主题] Argon
+git clone https://github.com/sbwml/luci-theme-argon.git package/luci-theme-argon
+# [主题] KuCat (备用)
+git clone https://github.com/sirpdboy/luci-theme-kucat package/luci-theme-kucat
+# [插件] MosDNS
+git clone https://github.com/sbwml/luci-app-mosdns.git package/mosdns
+# [插件] DiskMan (磁盘管理)
+git clone https://github.com/lisaac/luci-app-diskman.git package/diskman
+# [插件] EasyTier
 git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
-# [插件] UU加速器 (FW4 适配版，源里的是旧版，必须手动下新的)
+# [插件] UU加速器 (FW4 适配版)
 git clone https://github.com/BCYDTZ/luci-app-UUGameAcc.git package/luci-app-UUGameAcc
-# [插件] 你的旧版 IPK 源码 (如果有的话)
+# [插件] 你的旧版 IPK 源码 (记得修改地址，没用到就注释掉)
 # git clone https://github.com/你的旧软件作者/仓库名.git package/my-old-app
 
+# --- 编译修复与补丁 ---
 
-# --- 编译修复补丁 (Handles.sh) ---
-
-#  [预置] HomeProxy 数据
+# 预置 HomeProxy 数据 (防止编译报错)
 if [ -d package/homeproxy ]; then
 	HP_RULE="surge"
 	HP_PATH="package/homeproxy/root/etc/homeproxy"
@@ -36,13 +43,13 @@ if [ -d package/homeproxy ]; then
 	cd ../.. && rm -rf ./$HP_RULE/
 fi
 
-# [修复] NSS 驱动启动顺序 (AP8220 性能核心!)
+# NSS 驱动启动顺序
 NSS_DRV=$(find feeds/nss_packages/ -name "qca-nss-drv.init")
 [ -f "$NSS_DRV" ] && sed -i 's/START=.*/START=85/g' $NSS_DRV
 NSS_PBUF="./package/kernel/mac80211/files/qca-nss-pbuf.init"
 [ -f "$NSS_PBUF" ] && sed -i 's/START=.*/START=86/g' $NSS_PBUF
 
-# [修复] Tailscale / Rust / Diskman 编译错误
+# 编译报错修复
 TS_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/tailscale/Makefile")
 [ -f "$TS_FILE" ] && sed -i '/\/files/d' $TS_FILE
 RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makefile")
@@ -50,12 +57,14 @@ RUST_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/rust/Makef
 DM_FILE="./package/diskman/applications/luci-app-diskman/Makefile"
 [ -f "$DM_FILE" ] && { sed -i 's/fs-ntfs/fs-ntfs3/g' $DM_FILE; sed -i '/ntfs-3g-utils /d' $DM_FILE; }
 
-# --- 系统设置 (Settings.sh) ---
+
+# ==============================================================================
+# --- 系统设置 ---
+# ==============================================================================
 
 # 修改 IP / 主机名 / 默认主题
 sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" package/base-files/files/bin/config_generate
 sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" package/base-files/files/bin/config_generate
-# 强制设置默认主题 (Argon)
 sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" feeds/luci/collections/luci/Makefile
 sed -i "/attendedsysupgrade/d" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 
