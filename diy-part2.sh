@@ -22,7 +22,6 @@ git clone https://github.com/BCYDTZ/luci-app-UUGameAcc.git package/luci-app-UUGa
 # [插件] 你的旧版 IPK 源码
 # git clone https://github.com/你的旧软件作者/仓库名.git package/my-old-app
 
-
 # --- 智能包管理 (源自 Packages.sh) ---
 
 UPDATE_PACKAGE() {
@@ -114,6 +113,7 @@ elif [ -f "$WIFI_UC" ]; then
 fi
 
 # --- 高通平台 (AP8220) 专用配置逻辑 ---
+
 # 警告：这里必须写入 .config (因为云编译时 builder.config 会变成 .config)
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     # 禁用 NSS Feed (防炸)
