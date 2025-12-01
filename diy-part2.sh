@@ -22,3 +22,6 @@
 # 这里必须填入你要的那个旧软件的源码地址
 # 举例：如果你想要旧版的某插件，把下面这行的 # 去掉并改成真实地址
 # git clone https://github.com/你的旧软件作者/仓库名.git package/my-old-app
+
+# 下载 EasyTier 源码 (P2P 异地组网神器)
+git clone https://github.com/EasyTier/OpenWrt-EasyTier package/easytier
