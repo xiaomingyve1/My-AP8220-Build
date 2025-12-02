@@ -16,6 +16,8 @@ export WRT_WORD_2G="12345678"
 export WRT_SSID_5G="My_AP8220"
 export WRT_WORD_5G="12345678"
 
+# --- 关键系统标识 (请勿修改/请勿删除) ---
+# 这行代码告诉脚本这是高通平台，从而开启 NSS 满血加速
 export WRT_TARGET="QUALCOMMAX"
 
 # =========================================================
