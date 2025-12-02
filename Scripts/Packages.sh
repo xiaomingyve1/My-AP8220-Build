@@ -47,11 +47,10 @@ UPDATE_PACKAGE "argon" "sbwml/luci-theme-argon" "openwrt-24.10"
 UPDATE_PACKAGE "aurora" "eamonxg/luci-theme-aurora" "master"
 UPDATE_PACKAGE "kucat" "sirpdboy/luci-theme-kucat" "js"
 
-# --- [新增/修改] 你的核心需求插件 ---
-# AdGuardHome 界面 (你指定的 rufengsuixing)
+# --- [新增] 你要求的 AdGuardHome 界面 ---
 UPDATE_PACKAGE "luci-app-adguardhome" "rufengsuixing/luci-app-adguardhome" "master"
 
-# --- 现有插件保持不变 ---
+# --- [保持不变] 以下是你原本的完整插件列表 ---
 UPDATE_PACKAGE "homeproxy" "VIKINGYFY/homeproxy" "main"
 UPDATE_PACKAGE "momo" "nikkinikki-org/OpenWrt-momo" "main"
 UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main"
