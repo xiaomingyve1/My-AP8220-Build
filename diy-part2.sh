@@ -13,7 +13,7 @@ export WRT_SSID_2G="My_AP8220_2.4G"
 export WRT_WORD_2G="12345678"
 
 # --- WiFi 5G 设置 ---
-export WRT_SSID_5G="My_AP8220_5G"
+export WRT_SSID_5G="My_AP8220"
 export WRT_WORD_5G="12345678"
 
 export WRT_TARGET="QUALCOMMAX"
