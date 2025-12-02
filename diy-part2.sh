@@ -20,37 +20,47 @@ export WRT_WORD_5G="12345678"
 export WRT_TARGET="QUALCOMMAX"
 
 # =========================================================
-# 2. 补充环境 (解决编译报错)
+# 2. 定义脚本路径 (你的新路径)
 # =========================================================
-# 必须先执行这个，确保后续插件能编译
+MY_SCRIPTS_DIR="$GITHUB_WORKSPACE/My-warehouse/Scripts"
+
+# =========================================================
+# 3. 补充环境 (解决 AdGuardHome 编译报错)
+# =========================================================
 rm -rf feeds/packages/lang/golang
 git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
 
 # =========================================================
-# 3. 调用外部脚本 (注意路径！)
+# 4. 调用外部脚本
 # =========================================================
 
-# (1) Packages.sh: 必须进入 package 目录下载，这样才会生成 apk
-if [ -f "$GITHUB_WORKSPACE/Packages.sh" ]; then
-    chmod +x $GITHUB_WORKSPACE/Packages.sh
-    echo "Running Packages.sh in package/ directory..."
+# (1) Packages.sh: 必须进入 package 目录执行
+if [ -f "$MY_SCRIPTS_DIR/Packages.sh" ]; then
+    chmod +x "$MY_SCRIPTS_DIR/Packages.sh"
+    echo "Executing Packages.sh from $MY_SCRIPTS_DIR..."
     cd package
-    source $GITHUB_WORKSPACE/Packages.sh
+    source "$MY_SCRIPTS_DIR/Packages.sh"
     cd ..
+else
+    echo "ERROR: Packages.sh not found at $MY_SCRIPTS_DIR"
 fi
 
-# (2) Handles.sh: 必须在 根目录 执行，否则找不到 ../feeds 文件
-if [ -f "$GITHUB_WORKSPACE/Handles.sh" ]; then
-    chmod +x $GITHUB_WORKSPACE/Handles.sh
-    echo "Running Handles.sh in root directory..."
-    source $GITHUB_WORKSPACE/Handles.sh
+# (2) Handles.sh: 必须在根目录执行
+if [ -f "$MY_SCRIPTS_DIR/Handles.sh" ]; then
+    chmod +x "$MY_SCRIPTS_DIR/Handles.sh"
+    echo "Executing Handles.sh from $MY_SCRIPTS_DIR..."
+    source "$MY_SCRIPTS_DIR/Handles.sh"
+else
+    echo "ERROR: Handles.sh not found at $MY_SCRIPTS_DIR"
 fi
 
-# (3) Settings.sh: 必须在 根目录 执行
-if [ -f "$GITHUB_WORKSPACE/Settings.sh" ]; then
-    chmod +x $GITHUB_WORKSPACE/Settings.sh
-    echo "Running Settings.sh in root directory..."
-    source $GITHUB_WORKSPACE/Settings.sh
+# (3) Settings.sh: 必须在根目录执行
+if [ -f "$MY_SCRIPTS_DIR/Settings.sh" ]; then
+    chmod +x "$MY_SCRIPTS_DIR/Settings.sh"
+    echo "Executing Settings.sh from $MY_SCRIPTS_DIR..."
+    source "$MY_SCRIPTS_DIR/Settings.sh"
+else
+    echo "ERROR: Settings.sh not found at $MY_SCRIPTS_DIR"
 fi
 
 echo "DIY-Part2 Done!"
