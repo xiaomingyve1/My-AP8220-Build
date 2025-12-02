@@ -19,31 +19,42 @@ export WRT_TARGET="QUALCOMMAX"
 MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
-# 3. 关键修复：清理官方 WiFi 驱动 (解决 hostapd 报错)
+# 3. 关键修复：清理冲突的官方驱动 (Hostapd)
 # =========================================================
-# 这一步至关重要！IPQ807x 必须使用源码自带的 hostapd，不能用 feeds 里的。
-# 删除 feeds 里的 hostapd 和 wpad，强制回滚到源码版本。
-echo "Removing conflicting hostapd/wpad from feeds..."
-rm -rf feeds/packages/net/hostapd
-rm -rf feeds/packages/net/wpad
-rm -rf feeds/network/services/hostapd
-rm -rf feeds/network/services/wpad
+# [核心修正] 必须删除 package/feeds/ 下的文件，因为它们已经被安装进去了
+# 删除后，编译器会自动寻找源码 package/network/services/ 下的自带版本
+
+echo "Nuking conflicting hostapd from package directory..."
+rm -rf package/feeds/packages/net/hostapd
+rm -rf package/feeds/packages/net/wpad
+rm -rf package/feeds/network/services/hostapd
+rm -rf package/feeds/network/services/wpad
 
 # =========================================================
-# 4. 关键修复：升级 Golang (解决 AdGuardHome 报错)
+# 4. 关键修复：解决 AdGuardHome Go 版本报错
 # =========================================================
-# AdGuardHome 现在要求 Go >= 1.25.3。
-# 我们必须清理旧的 golang，并拉取 sbwml 的最新代码。
-echo "Updating Golang environment..."
+# 方案 A: 尝试升级 Golang 到最新 (依赖 sbwml 更新)
 rm -rf feeds/packages/lang/golang
-# 使用 sbwml 的库，通常更新最快
 git clone https://github.com/sbwml/packages_lang_golang feeds/packages/lang/golang
+
+# 方案 B (保底): 如果升级 Go 也没用，强制把 AdGuardHome 降级到稳定版 (0.107.53)
+# 找到 AGH 的 Makefile
+AGH_MAKEfile=$(find package/feeds/packages/ -name "Makefile" | grep "adguardhome")
+if [ -f "$AGH_MAKEfile" ]; then
+    echo "Force downgrading AdGuardHome to 0.107.53 to fix Go compile error..."
+    # 修改版本号
+    sed -i 's/^PKG_VERSION:=.*/PKG_VERSION:=0.107.53/' "$AGH_MAKEfile"
+    # 注释掉 hash 校验，防止降级后校验失败
+    sed -i 's/^PKG_HASH:=/# PKG_HASH:=/' "$AGH_MAKEfile"
+    # 确保不使用 Git 自动生成的版本
+    sed -i 's/^PKG_SOURCE_VERSION:=.*/# PKG_SOURCE_VERSION:=/' "$AGH_MAKEfile"
+fi
 
 # =========================================================
 # 5. 执行外部脚本
 # =========================================================
 
-# --- 进入 package 目录执行下载 ---
+# --- 进入 package 目录 ---
 cd package
     if [ -f "$MY_SCRIPTS/Packages.sh" ]; then
         chmod +x "$MY_SCRIPTS/Packages.sh"
@@ -56,7 +67,7 @@ cd package
     fi
 cd ..
 
-# --- 回到根目录执行设置 ---
+# --- 回到根目录 ---
 if [ -f "$MY_SCRIPTS/Settings.sh" ]; then
     chmod +x "$MY_SCRIPTS/Settings.sh"
     source "$MY_SCRIPTS/Settings.sh"
