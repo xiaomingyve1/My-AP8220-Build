@@ -19,28 +19,32 @@ export WRT_TARGET="QUALCOMMAX"
 MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
-# 3. 关键修复：清理冲突的 WiFi 驱动
+# 3. 关键修复：无死角清理冲突的 WiFi 驱动
 # =========================================================
-# 必须删除 feeds 里的 hostapd/wpad，强制使用源码自带版本
-rm -rf package/feeds/packages/net/hostapd
-rm -rf package/feeds/packages/net/wpad
-rm -rf package/feeds/network/services/hostapd
-rm -rf package/feeds/network/services/wpad
+# 使用 find 命令全盘搜索 package/feeds 目录下所有的 hostapd 和 wpad
+# 不管它藏在 base 还是 packages 还是 net 目录下，全部强制删除
+# 这样编译器就只能去用源码自带的 package/network/services/hostapd (兼容版)
+
+echo "Searching and destroying conflicting hostapd/wpad..."
+find package/feeds -type d -name "hostapd" -exec rm -rf {} +
+find package/feeds -type d -name "wpad" -exec rm -rf {} +
+
+echo "Conflicting drivers removed."
 
 # =========================================================
 # 4. 关键修复：原生修改 Golang 为官方最新版
 # =========================================================
+# 解决 AdGuardHome 报错 (Go >= 1.25.3)
 
-# 直接定位系统自带的 Makefile (不再下载第三方的)
 GO_MAKEFILE="feeds/packages/lang/golang/Makefile"
 
 if [ -f "$GO_MAKEFILE" ]; then
     echo "Querying official latest Go version..."
     
-    # 从 Go 官网获取最新版本号 (如 go1.25.4)
+    # 动态获取 Go 官网最新版本号 (如 go1.25.4)
     LATEST_GO=$(curl -sL https://go.dev/VERSION?m=text | head -n1)
     
-    # 如果获取失败，给个保底 1.25.3 (AdGuardHome 要求的最低版本)
+    # 保底机制：如果网络不好获取不到，就用 1.25.3
     if [ -z "$LATEST_GO" ]; then
         LATEST_GO="go1.25.3"
     fi
