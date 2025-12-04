@@ -19,63 +19,59 @@ export WRT_TARGET="QUALCOMMAX"
 MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
-# 3. 真正的终极修复：使用官方卸载命令
+# 3. 终极大招：偷梁换柱 (覆盖法)
 # =========================================================
-# 解决 hostapd-2025.08.26 报错
-# 之前的 rm 可能没清理掉 feed 索引，这次用 uninstall 命令正规卸载
-echo "Uninstalling conflicting official WiFi packages..."
+# 既然删不掉，那就不删了。
+# 我们直接把"源码自带的好包"强制复制到"feeds目录的坏包"位置。
+# 这样无论编译器读哪一个，读到的都是兼容的源码版。
 
-# 卸载所有可能冲突的包名
-./scripts/feeds uninstall hostapd
-./scripts/feeds uninstall wpad
-./scripts/feeds uninstall hostapd-openssl
-./scripts/feeds uninstall wpad-openssl
-./scripts/feeds uninstall wpad-basic
-./scripts/feeds uninstall wpad-mini
-./scripts/feeds uninstall wpad-wolfssl
+echo "Overwriting conflicting feeds with internal source..."
 
-# 物理粉碎：防止卸载后还有残留文件夹
-echo "Physically removing feed sources..."
-rm -rf feeds/packages/net/hostapd
-rm -rf feeds/packages/net/wpad
-# 双重保险：扫描 package/feeds 下的残留
-find package/feeds -type d -name "hostapd*" -exec rm -rf {} +
-find package/feeds -type d -name "wpad*" -exec rm -rf {} +
+# 1. 定义源码自带的路径 (这是绝对兼容的好版本)
+GOOD_HOSTAPD="package/network/services/hostapd"
+GOOD_WPAD="package/network/services/hostapd" # wpad 通常和 hostapd 在一起
 
-echo "Conflicting drivers fully removed. Using internal source."
+# 2. 找到 feeds 里捣乱的路径 (全盘扫描)
+# 只要是 feeds 目录下叫 hostapd 的目录，全部用好版本覆盖掉
+find feeds -type d -name "hostapd" | while read -r BAD_DIR; do
+    echo "Replacing bad dir: $BAD_DIR"
+    rm -rf "$BAD_DIR"       # 先清空坏的
+    cp -rf "$GOOD_HOSTAPD" "$BAD_DIR" # 把好的填进去
+done
+
+find feeds -type d -name "wpad" | while read -r BAD_DIR; do
+    echo "Replacing bad dir: $BAD_DIR"
+    rm -rf "$BAD_DIR"
+    cp -rf "$GOOD_WPAD" "$BAD_DIR"
+done
+
+# 3. 强制更新索引，让编译系统认可这次"掉包"
+./scripts/feeds install -p packages -f hostapd
+./scripts/feeds install -p packages -f wpad
+
+echo "Replacement complete. Compiler has been tricked."
 
 # =========================================================
-# 4. Golang 官方最新版自动对接 (修复 AdGuardHome)
+# 4. Golang 官方最新版自动对接
 # =========================================================
+# 保持自动获取逻辑，这部分没问题
 
-# 1. 找到系统自带的 Golang Makefile
-# 使用 find 确保路径正确，兼容不同源码结构
 GO_MAKEFILE=$(find feeds/packages/lang/ -name "Makefile" | grep "/golang/")
 
 if [ -f "$GO_MAKEFILE" ]; then
     echo "Querying Go Official Latest Version..."
-    
-    # 1. 从 Go 官网接口获取最新版本 (增加超时防止卡死)
     LATEST_GO=$(curl -sL --connect-timeout 5 https://go.dev/VERSION?m=text | head -n1)
     
-    # 2. 保底机制
     if [[ -z "$LATEST_GO" || "$LATEST_GO" != go* ]]; then
-        echo "Network Error. Fallback to 1.25.3"
         LATEST_GO="go1.25.3"
     fi
     
-    # 3. 提取纯数字 (go1.25.5 -> 1.25.5)
     GO_VERSION="${LATEST_GO#go}"
-    
     echo "Detected Target Go Version: $GO_VERSION"
     
-    # 4. 修改 Makefile
     sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$GO_VERSION/" "$GO_MAKEFILE"
     sed -i 's/^PKG_HASH:=.*/PKG_HASH:=skip/' "$GO_MAKEFILE"
-    
     echo "Golang Makefile updated."
-else
-    echo "Warning: Golang Makefile not found."
 fi
 
 # =========================================================
