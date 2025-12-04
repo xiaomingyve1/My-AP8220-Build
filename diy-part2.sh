@@ -19,24 +19,21 @@ export WRT_TARGET="QUALCOMMAX"
 MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
-# 3. 核弹级清理：WiFi 驱动冲突 (彻底根除 he_mu_edca 报错)
+# 3. 这里的改动是关键！无死角扫描删除冲突驱动
 # =========================================================
-# 之前的命令没删干净，这次使用通配符强制删除所有 feeds 里的相关包
-# 不管它叫 hostapd, hostapd-openssl, wpad, wpad-mini... 统统删掉
-# 确保编译器只能看到 package/network/services/ 下的源码自带版本
+# 之前的命令因为路径不对没删掉，导致 hostapd-2025.08.26 依然在报错
+# 这次使用 find 命令全盘搜索 package/feeds 目录下所有的相关文件夹
+# -name "hostapd*" 会匹配 hostapd, hostapd-openssl, hostapd-wolfssl 等所有变种
+# 只有把它们全删光，编译器才会乖乖去用 package/network/services/hostapd (源码自带版)
 
-echo "Executing NUCLEAR cleanup for hostapd/wpad..."
-rm -rf package/feeds/*/hostapd*
-rm -rf package/feeds/*/wpad*
-
-# 二次检查：防止漏网之鱼 (如果还有残留，find 会再次补刀)
-find package/feeds -type d -name "*hostapd*" -exec rm -rf {} +
-find package/feeds -type d -name "*wpad*" -exec rm -rf {} +
+echo "Executing NUCLEAR cleanup for conflicting hostapd/wpad..."
+find package/feeds -type d -name "hostapd*" -exec rm -rf {} +
+find package/feeds -type d -name "wpad*" -exec rm -rf {} +
 
 echo "Conflicting WiFi drivers annihilated."
 
 # =========================================================
-# 4. Golang 官方版自动对接 (解决 Go >= 1.25.3)
+# 4. Golang 官方最新版自动对接 (满足 AdGuardHome 要求)
 # =========================================================
 
 # 1. 找到系统自带的 Golang Makefile
