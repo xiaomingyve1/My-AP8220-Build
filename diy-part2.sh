@@ -19,53 +19,51 @@ export WRT_TARGET="QUALCOMMAX"
 MY_SCRIPTS="$GITHUB_WORKSPACE/My-warehouse/Scripts"
 
 # =========================================================
-# 3. 这里的改动是关键！无死角扫描删除冲突驱动
+# 3. 终极修复：使用官方命令卸载冲突包 (替换掉 find 删除)
 # =========================================================
-# 之前的命令因为路径不对没删掉，导致 hostapd-2025.08.26 依然在报错
-# 这次使用 find 命令全盘搜索 package/feeds 目录下所有的相关文件夹
-# -name "hostapd*" 会匹配 hostapd, hostapd-openssl, hostapd-wolfssl 等所有变种
-# 只有把它们全删光，编译器才会乖乖去用 package/network/services/hostapd (源码自带版)
+# 之前的 find 删除可能删不干净软链接或缓存
+# 使用 uninstall 命令会让编译系统"正式"移除这些包的索引
+# 这样它就绝对不可能再去编译 feeds 里的 hostapd 了
 
-echo "Executing NUCLEAR cleanup for conflicting hostapd/wpad..."
-find package/feeds -type d -name "hostapd*" -exec rm -rf {} +
-find package/feeds -type d -name "wpad*" -exec rm -rf {} +
+echo "Uninstalling official hostapd/wpad via feeds script..."
+./scripts/feeds uninstall hostapd
+./scripts/feeds uninstall wpad
+./scripts/feeds uninstall hostapd-openssl
+./scripts/feeds uninstall wpad-openssl
 
-echo "Conflicting WiFi drivers annihilated."
+# 为了双重保险，卸载后再把源文件目录改成不可读或删除
+# 这样就算有漏网之鱼想重装也找不到源
+rm -rf feeds/packages/net/hostapd
+rm -rf feeds/packages/net/wpad
+
+echo "Official WiFi drivers uninstalled. Using internal source drivers."
 
 # =========================================================
-# 4. Golang 官方最新版自动对接 (满足 AdGuardHome 要求)
+# 4. Golang 官方最新版自动对接
 # =========================================================
+# 保持你认可的自动获取逻辑
 
-# 1. 找到系统自带的 Golang Makefile
 GO_MAKEFILE=$(find feeds/packages/lang/ -name "Makefile" | grep "/golang/")
 
 if [ -f "$GO_MAKEFILE" ]; then
     echo "Querying Go Official Latest Version..."
     
-    # 1. 从 Go 官网接口获取最新版本 (例如返回 go1.25.4)
-    # 增加超时设置防止卡死
+    # 获取官方最新版
     LATEST_GO=$(curl -sL --connect-timeout 5 https://go.dev/VERSION?m=text | head -n1)
     
-    # 2. 如果官网抽风没获取到，强制使用 1.25.3 (AdGuardHome 的最低要求)
     if [[ -z "$LATEST_GO" || "$LATEST_GO" != go* ]]; then
-        echo "Network Error or Invalid Response. Fallback to 1.25.3"
+        echo "Network Error. Fallback to 1.25.3"
         LATEST_GO="go1.25.3"
     fi
     
-    # 3. 提取纯数字版本号 (go1.25.4 -> 1.25.4)
     GO_VERSION="${LATEST_GO#go}"
+    echo "Target Go Version: $GO_VERSION"
     
-    echo "Detected Target Go Version: $GO_VERSION"
-    
-    # 4. 修改 Makefile
-    # 修改版本号
+    # 修改 Makefile
     sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=$GO_VERSION/" "$GO_MAKEFILE"
-    # 强制修改 Hash 为 skip (因为我们用的是动态最新版，无法预知 Hash)
     sed -i 's/^PKG_HASH:=.*/PKG_HASH:=skip/' "$GO_MAKEFILE"
     
-    echo "Golang Makefile updated. Will download $GO_VERSION from Official Source."
-else
-    echo "CRITICAL WARNING: Golang Makefile not found! AdGuardHome might fail."
+    echo "Golang Makefile updated."
 fi
 
 # =========================================================
